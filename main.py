@@ -56,7 +56,7 @@ def draw_shield_bar(surf, x, y, pct):
 def draw_lives(surf,x,y,lives,img):
     for i in range(lives): 
         img_rect = img.get_rect()
-        img_rect.x = x +30 * i
+        img_rect.x = x +50 * (i-1)
         img_rect.y = y
         surf.blit(img, img_rect)
 
@@ -198,9 +198,10 @@ class Explosion(pygame.sprite.Sprite):
 background = pygame.image.load(path.join(img_dir, 'back.png')).convert()
 background_rect = background.get_rect()
 ship_img = pygame.image.load(path.join(img_dir, 'playerShip2_orange.png')).convert()
-player_img = pygame.image.load()
-player_mini_img = pygame.transform.scale(player_img, (25, 19))
+player_img = pygame.image.load(path.join(img_dir, 'playerShip2_orange.png'))
+player_mini_img = pygame.transform.scale(player_img, (50, 50))
 player_mini_img.set_colorkey(BLACK)
+
 laser_img = pygame.image.load(path.join(img_dir, 'laserRed12.png')).convert()
 enemy_images = []
 enemy_list = ['meteorBrown_big3.png', 'meteorBrown_med3.png', 'meteorBrown_med1.png','meteorBrown_small1.png']
@@ -223,10 +224,12 @@ for i in range(9):
     img = pygame.image.load(path.join(img_dir, filename)).convert()
     img.set_colorkey(BLACK)
     explosion_anim['player'].append(img)
+
     
 #загрузка звуков
 shoot_sound = pygame.mixer.Sound(path.join(snd_dir, 'sfx_laser2.ogg'))
 expl_sounds = pygame.mixer.Sound(path.join(snd_dir, 'expl6.wav'))
+expl_sound2 = pygame.mixer.Sound(path.join(snd_dir, 'rumble1.ogg'))
 pygame.mixer.music.load(path.join(snd_dir, 'through space.ogg'))
 pygame.mixer.music.set_volume(0.4)
 
@@ -236,6 +239,7 @@ mobs = pygame.sprite.Group()
 bullets = pygame.sprite.Group()
 player = Player()
 all_sprites.add(player)
+draw_lives(screen, WIDTH - 100, 5, player.lives, player_mini_img)
 
 
 for i in range(8):
@@ -271,7 +275,18 @@ while running:
     hits = pygame.sprite.spritecollide(player, mobs, True, pygame.sprite.collide_circle)
     for hit in hits: 
         player.shield -= hit.radius * 2
-        if player.shield <= 0: 
+        expl = Explosion(hit.rect.center , 'sm')
+        all_sprites.add(expl)
+        newmob()
+        if player.shield <= 0:
+            death_explosion = Explosion(player.rect.center, 'player')
+            all_sprites.add(death_explosion)
+            player.hide()
+            player.lives -= 1
+            player.shield = 100
+
+
+        if player.lives == 0 and not death_explosion.alive():
             running = False
    
     # Рендеринг
@@ -280,6 +295,7 @@ while running:
     all_sprites.draw(screen)
     draw_text(screen, str(score), 18, WIDTH / 2, 10)
     draw_shield_bar(screen, 5, 5, player.shield)
+    draw_lives(screen, WIDTH - 100, 5, player.lives, player_mini_img)
     # После отрисовки всего, переворачиваем экран
     pygame.display.flip()
 
