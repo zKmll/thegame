@@ -1,3 +1,4 @@
+from asyncio import shield
 import pygame
 from os import path
 import random
@@ -59,6 +60,22 @@ def draw_lives(surf,x,y,lives,img):
         img_rect.x = x +50 * (i-1)
         img_rect.y = y
         surf.blit(img, img_rect)
+        
+
+def show_go_screen():
+    screen.blit(background, background_rect)
+    draw_text(screen, "SHMUP!", 64, WIDTH / 2, HEIGHT / 4)
+    draw_text(screen, "Двигаться стрелками, Стрелять пробелом", 22,WIDTH / 2, HEIGHT / 2)
+    draw_text(screen, "Нажмите клавишу, чтобы начать", 18, WIDTH / 2, HEIGHT * 3 / 4)
+    pygame.display.flip()
+    waiting = True
+    while waiting:
+        clock.tick(FPS)
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                pygame.quit()
+            if event.type == pygame.KEYUP:
+                waiting = False
 
 class Player(pygame.sprite.Sprite):
     def __init__(self):
@@ -170,6 +187,25 @@ class Bullet(pygame.sprite.Sprite):
         if self.rect.bottom < 0:
             self.kill()
 
+class Pow(pygame.sprite.Sprite):
+    def __init__(self, center):
+        pygame.sprite.Sprite.__init__(self)
+        self.type = random.choice(['shield'])
+        self.image = powerup_images[self.type]
+
+        self.image.set_colorkey(BLACK)
+        self.rect = self.image.get_rect()
+        self.rect.center = center
+        self.speedy = 2
+
+    def update(self):
+        self.rect.y += self.speedy
+        # убить, если он заходит за верхнюю часть экрана
+        if self.rect.height > HEIGHT:
+            self.kill()
+
+powerups = pygame.sprite.Group()
+
 class Explosion(pygame.sprite.Sprite):
     def __init__(self, center,size):
         pygame.sprite.Sprite.__init__(self)
@@ -183,6 +219,7 @@ class Explosion(pygame.sprite.Sprite):
 
     def update(self):
         now = pygame.time.get_ticks()
+        expl_sound2.play()
         if now - self.last_update > self.frame_rate:
             self.last_update = now 
             self.frame +=1
@@ -198,10 +235,11 @@ class Explosion(pygame.sprite.Sprite):
 background = pygame.image.load(path.join(img_dir, 'back.png')).convert()
 background_rect = background.get_rect()
 ship_img = pygame.image.load(path.join(img_dir, 'playerShip2_orange.png')).convert()
-player_img = pygame.image.load(path.join(img_dir, 'playerShip2_orange.png'))
+player_img = pygame.image.load(path.join(img_dir, 'playerShip2_orange.png')).convert()
 player_mini_img = pygame.transform.scale(player_img, (50, 50))
 player_mini_img.set_colorkey(BLACK)
-
+powerup_images = {}
+powerup_images['shield'] = pygame.image.load(path.join(img_dir, 'bolt_gold.png')).convert()
 laser_img = pygame.image.load(path.join(img_dir, 'laserRed12.png')).convert()
 enemy_images = []
 enemy_list = ['meteorBrown_big3.png', 'meteorBrown_med3.png', 'meteorBrown_med1.png','meteorBrown_small1.png']
@@ -248,8 +286,21 @@ score = 0
 
 # Цикл игры
 pygame.mixer.music.play(loops=-1)
+game_over = True 
 running = True
 while running:
+    if game_over:
+        show_go_screen()
+        game_over = False
+        all_sprites = pygame.sprite.Group()
+        mobs = pygame.sprite.Group()
+        bullets = pygame.sprite.Group()
+        powerups = pygame.sprite.Group()
+        player = Player()
+        all_sprites.add(player)
+        for i in range(8):
+            newmob()
+        score = 0
     # Держим цикл на правильной скорости
     clock.tick(FPS)
     # Ввод процесса (события)
@@ -267,9 +318,14 @@ while running:
     for hit in hits:
         score += 50 - hit.radius
         expl_sounds.play()
-        m = Mob()
-        all_sprites.add(m)
-        mobs.add(m)
+        expl = Explosion(hit.rect.center, 'lg')
+        all_sprites.add(expl)
+        if random.random() > 0.9:
+            pow = Pow(hit.rect.center)
+            all_sprites.add(pow)
+            powerups.add(pow)
+        newmob()
+        
 
     # Проверка, не ударил ли моб игрока
     hits = pygame.sprite.spritecollide(player, mobs, True, pygame.sprite.collide_circle)
@@ -287,7 +343,17 @@ while running:
 
 
         if player.lives == 0 and not death_explosion.alive():
-            running = False
+            running = True
+
+    # Проверка столкновений игрока и улучшения
+    hits = pygame.sprite.spritecollide(player, powerups, True)
+    for hit in hits:
+        if hit.type == 'shield':
+            player.shield += random.randrange(10, 30)
+            if player.shield >= 100:
+                player.shield = 100
+        if hit.type == 'gun':
+            pass
    
     # Рендеринг
     screen.fill(BLACK)
