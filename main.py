@@ -198,7 +198,7 @@ class Explosion(pygame.sprite.Sprite):
 background = pygame.image.load(path.join(img_dir, 'back.png')).convert()
 background_rect = background.get_rect()
 ship_img = pygame.image.load(path.join(img_dir, 'playerShip2_orange.png')).convert()
-player_img = pygame.image.load()
+player_img = pygame.image.load(path.join(img_dir, 'playerShip2_orange.png')).convert()
 player_mini_img = pygame.transform.scale(player_img, (25, 19))
 player_mini_img.set_colorkey(BLACK)
 laser_img = pygame.image.load(path.join(img_dir, 'laserRed12.png')).convert()
@@ -227,6 +227,7 @@ for i in range(9):
 #загрузка звуков
 shoot_sound = pygame.mixer.Sound(path.join(snd_dir, 'sfx_laser2.ogg'))
 expl_sounds = pygame.mixer.Sound(path.join(snd_dir, 'expl6.wav'))
+expl_sounds2 = pygame.mixer.Sound(path.join(snd_dir, 'rumble1.ogg'))
 pygame.mixer.music.load(path.join(snd_dir, 'through space.ogg'))
 pygame.mixer.music.set_volume(0.4)
 
